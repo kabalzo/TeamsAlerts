@@ -1,4 +1,29 @@
 $data = Import-Csv -Path .\test_info.csv
+$dept = ""
+
+while ($true) {
+	$_dept= Read-Host "Enter the Department"
+	Write-Host "Department entered was: $_dept"
+	$selection = Read-Host "Confirm [y] [n]?"
+	if ($selection -eq "y") {
+		$_dept = $_dept.ToUpper()
+		$dept = $_dept
+		try {
+			mkdir $_dept -ErrorAction Stop
+		}
+		catch {
+			Remove-Item $_dept -Recurse -Force
+			mkdir $_dept
+		}
+		break
+	}
+	elseif ($selection -eq "n") {
+		continue 
+	}
+	else { 
+		Write-Host "Invalid selection. Try again." -ForegroundColor Red
+	}
+}
 
 foreach ($line in $data) {
 	$myWD = $pwd.ToString()
@@ -9,7 +34,8 @@ foreach ($line in $data) {
 	$helpTitle = $line.Help_Title
 	$medTitle = $line.Medical_Title
 	$threatTitle = $line.Threat_Title
-	mkdir $room
+	mkdir "$dept\$room"
+	$startInPath = "$myWD\$dept\$room"
 
 	$line1 = "`$myTeamsWebHook = `"$webhook`""
 	$line2_Help = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$helpTitle`", `"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
@@ -17,47 +43,62 @@ foreach ($line in $data) {
 	$line2_Threat = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$threatTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
 
 	#Create Help Needed .ps1 file
-	$fileToMake = "$myWD\$room\test1.ps1"
+	$fileToMake = "$startInPath\test1.ps1"
 	$line1 | Out-File -FilePath $fileToMake -Append
 	$line2_Help | Out-File -FilePath $fileToMake -Append
 
 	#Create Medical .ps1 file
-	$fileToMake = "$myWD\$room\test2.ps1"
+	$fileToMake = "$startInPath\test2.ps1"
 	$line1 | Out-File -FilePath $fileToMake -Append
 	$line2_Medical | Out-File -FilePath $fileToMake -Append
 
 	#Create Threat .ps1 file
-	$fileToMake = "$myWD\$room\test3.ps1"
+	$fileToMake = "$startInPath\test3.ps1"
 	$line1 | Out-File -FilePath $fileToMake -Append
 	$line2_Threat | Out-File -FilePath $fileToMake -Append
 
 	#Create "Alert - Help Needed" shortcut
-	$target = "-File `"$myWD\$room\test1.ps1`""
+	$target = "-File `"$startInPath\test1.ps1`""
 	$WshShell_Help = New-Object -comObject WScript.Shell
-	$Shortcut_Help = $WshShell_Help.CreateShortcut($myWD + "\$room\Alert - Help Needed.lnk")
+	$Shortcut_Help = $WshShell_Help.CreateShortcut("$startInPath\Alert - Help Needed.lnk")
 	$Shortcut_Help.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
 	$Shortcut_Help.Arguments = $target
-	#$Shortcut.IconLocation = "$myWD\Icons\Alert - Blue.ico"
+	try {
+		$Shortcut.IconLocation = "$myWD\Icons\Alert - Yellow.ico"
+	}
+	catch {
+		Write-Host "Unable to set custom icon" -ForegroundColor Red
+	}
 	$Shortcut_Help.WorkingDirectory = $myWD
 	$Shortcut_Help.Save()
 
 	#Create "Alert - Medical" shortcut
-	$target = "-File `"$myWD\$room\test2.ps1`""
+	$target = "-File `"$startInPath\test2.ps1`""
 	$WshShell_Medical = New-Object -comObject WScript.Shell
-	$Shortcut_Medical = $WshShell_Medical.CreateShortcut($myWD + "\$room\Alert - Medical.lnk")
+	$Shortcut_Medical = $WshShell_Medical.CreateShortcut("$startInPath\Alert - Medical.lnk")
 	$Shortcut_Medical.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
 	$Shortcut_Medical.Arguments = $target
-	#$Shortcut.IconLocation = "$myWD\Icons\Alert - Yellow.ico"
+	try {
+		$Shortcut.IconLocation = "$myWD\Icons\Alert - Blue.ico"
+	}
+	catch {
+		Write-Host "Unable to set custom icon" -ForegroundColor Red
+	}
 	$Shortcut_Medical.WorkingDirectory = $myWD
 	$Shortcut_Medical.Save()
 
 	#Create "Alert - Threat" shortcut
-	$target = "-File `"$myWD\$room\test1.ps3`""
+	$target = "-File `"$startInPath\test3.ps1`""
 	$WshShell_Threat = New-Object -comObject WScript.Shell
-	$Shortcut_Threat = $WshShell_Threat.CreateShortcut($myWD + "\$room\Alert - Threat.lnk")
+	$Shortcut_Threat = $WshShell_Threat.CreateShortcut("$startInPath\Alert - Threat.lnk")
 	$Shortcut_Threat.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
 	$Shortcut_Threat.Arguments = $target
-	#$Shortcut.IconLocation = "$myWD\Icons\Alert - Red.ico"
+	try {
+		$Shortcut.IconLocation = "$myWD\Icons\Alert - Red.ico"
+	}
+	catch {
+		Write-Host "Unable to set custom icon" -ForegroundColor Red
+	}
 	$Shortcut_Threat.WorkingDirectory = $myWD
 	$Shortcut_Threat.Save()
 }
