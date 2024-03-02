@@ -1,4 +1,4 @@
-$data = Import-Csv -Path .\test_info.csv
+$data = Import-Csv -Path .\AlertsTemplate.csv
 $dept = ""
 
 while ($true) {
