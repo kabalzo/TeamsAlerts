@@ -1,19 +1,19 @@
 $data = Import-Csv -Path .\test_info.csv
-$dept = ""
+$department = ""
 
 while ($true) {
-	$_dept= Read-Host "Enter the Department"
-	Write-Host "Department entered was: $_dept"
+	$department = Read-Host "Enter the Department"
+	Write-Host "Department entered was: $department"
 	$selection = Read-Host "Confirm [y] [n]?"
+
 	if ($selection -eq "y") {
-		$_dept = $_dept.ToUpper()
-		$dept = $_dept
+		$department = $department.ToUpper()
 		try {
-			mkdir $_dept -ErrorAction Stop
+			mkdir $department -ErrorAction Stop
 		}
 		catch {
-			Remove-Item $_dept -Recurse -Force
-			mkdir $_dept
+			Remove-Item $department -Recurse -Force
+			mkdir $department
 		}
 		break
 	}
@@ -25,81 +25,53 @@ while ($true) {
 	}
 }
 
-foreach ($line in $data) {
+function CreateShortcuts ([string]$StartPath, [string]$ShortcutName, [string]$IconFilePath, [string]$Department, [string]$AlertType) {
+	$target = "-File `"$AlertType`""
+	$WshShell = New-Object -comObject WScript.Shell
+	$Shortcut = $WshShell.CreateShortcut("$StartPath\$ShortcutName")
+	$Shortcut.TargetPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+	$Shortcut.Arguments = $target
+	$Shortcut.IconLocation = $IconFilePath
+	$Shortcut.WorkingDirectory = $StartPath
+	$Shortcut.Save()
+}
+
+function CreatePS1Files ([string]$MakeFile, [string]$WriteLine1, [string]$WriteLine2) {
+	$WriteLine1 | Out-File -FilePath $MakeFile -Append
+	$WriteLine2 | Out-File -FilePath $MakeFile -Append
+}
+
+foreach ($entry in $data) {
 	$myWD = $pwd.ToString()
-	$webhook = $line.Webhook
-	$room = $line.Room
-	$name = $line.Name
+	$webhook = $entry.Webhook
+	$room = $entry.Room
+	$name = $entry.Name
     $message = "$name in room $room"
-	$helpTitle = $line.Help_Title
-	$medTitle = $line.Medical_Title
-	$threatTitle = $line.Threat_Title
-	mkdir "$dept\$room"
-	$startInPath = "$myWD\$dept\$room"
+	$helpTitle = $entry.Help_Title
+	$medTitle = $entry.Medical_Title
+	$threatTitle = $entry.Threat_Title
+	$startInPath = "$myWD\$department\$room"
+	$lowDept = $department.ToLower()
 
-	$line1 = "`$myTeamsWebHook = `"$webhook`""
-	$line2_Help = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$helpTitle`", `"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
-	$line2_Medical = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$medTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
-	$line2_Threat = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$threatTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
+	mkdir "$department\$room"
 
-	#Create Help Needed .ps1 file
-	$fileToMake = "$startInPath\test1.ps1"
-	$line1 | Out-File -FilePath $fileToMake -Append
-	$line2_Help | Out-File -FilePath $fileToMake -Append
+	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
+	$PS1FileLine2_Help = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$helpTitle`", `"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
+	$PS1FileLine2_Medical = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$medTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
+	$PS1FileLine2_Threat = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$threatTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
 
-	#Create Medical .ps1 file
-	$fileToMake = "$startInPath\test2.ps1"
-	$line1 | Out-File -FilePath $fileToMake -Append
-	$line2_Medical | Out-File -FilePath $fileToMake -Append
+	$helpPath = "alertingpost_$lowDept`_helpneeded.ps1"	
+	$medPath = "alertingpost_$lowDept`_urgent_medical.ps1"
+	$threatPath = "alertingpost_$lowDept`_urgent_threat.ps1"
 
-	#Create Threat .ps1 file
-	$fileToMake = "$startInPath\test3.ps1"
-	$line1 | Out-File -FilePath $fileToMake -Append
-	$line2_Threat | Out-File -FilePath $fileToMake -Append
+	#Create .ps1 files
+	CreatePS1Files -MakeFile "$startInPath\$helpPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Help
+	CreatePS1Files -MakeFile "$startInPath\$medPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Medical
+	CreatePS1Files -MakeFile "$startInPath\$threatPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Threat
 
-	#Create "Alert - Help Needed" shortcut
-	$target = "-File `"$startInPath\test1.ps1`""
-	$WshShell_Help = New-Object -comObject WScript.Shell
-	$Shortcut_Help = $WshShell_Help.CreateShortcut("$startInPath\Alert - Help Needed.lnk")
-	$Shortcut_Help.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
-	$Shortcut_Help.Arguments = $target
-	try {
-		$Shortcut.IconLocation = "$myWD\Icons\Alert - Yellow.ico"
-	}
-	catch {
-		Write-Host "Unable to set custom icon" -ForegroundColor Red
-	}
-	$Shortcut_Help.WorkingDirectory = $myWD
-	$Shortcut_Help.Save()
-
-	#Create "Alert - Medical" shortcut
-	$target = "-File `"$startInPath\test2.ps1`""
-	$WshShell_Medical = New-Object -comObject WScript.Shell
-	$Shortcut_Medical = $WshShell_Medical.CreateShortcut("$startInPath\Alert - Medical.lnk")
-	$Shortcut_Medical.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
-	$Shortcut_Medical.Arguments = $target
-	try {
-		$Shortcut.IconLocation = "$myWD\Icons\Alert - Blue.ico"
-	}
-	catch {
-		Write-Host "Unable to set custom icon" -ForegroundColor Red
-	}
-	$Shortcut_Medical.WorkingDirectory = $myWD
-	$Shortcut_Medical.Save()
-
-	#Create "Alert - Threat" shortcut
-	$target = "-File `"$startInPath\test3.ps1`""
-	$WshShell_Threat = New-Object -comObject WScript.Shell
-	$Shortcut_Threat = $WshShell_Threat.CreateShortcut("$startInPath\Alert - Threat.lnk")
-	$Shortcut_Threat.TargetPath = """C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"""
-	$Shortcut_Threat.Arguments = $target
-	try {
-		$Shortcut.IconLocation = "$myWD\Icons\Alert - Red.ico"
-	}
-	catch {
-		Write-Host "Unable to set custom icon" -ForegroundColor Red
-	}
-	$Shortcut_Threat.WorkingDirectory = $myWD
-	$Shortcut_Threat.Save()
+	#Create .lnk shortcuts
+	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Help Needed.lnk" -IconFilePath "$myWD\Icons\Alert - Yellow.ico" -WorkingDir $myWD -Department $lowDept -AlertType $helpPath
+	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Medical.lnk" -IconFilePath "$myWD\Icons\Alert - Blue.ico" -WorkingDir $myWD -Department $lowDept -AlertType $medPath
+	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Threat.lnk" -IconFilePath "$myWD\Icons\Alert - Red.ico" -WorkingDir $myWD -Department $lowDept -AlertType $threatPath
 }
 
