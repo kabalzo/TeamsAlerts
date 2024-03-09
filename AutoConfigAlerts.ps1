@@ -56,7 +56,7 @@ foreach ($entry in $data) {
 	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
 	$room = $entry.Room
 	$name = $entry.Name
-    $message = "$name in room $room"
+    	$message = "$name in room $room"
 	$helpTitle = $entry.Help_Title
 	$medTitle = $entry.Medical_Title
 	$threatTitle = $entry.Threat_Title
