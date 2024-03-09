@@ -1,4 +1,4 @@
-<h1>Auto-deploy folders and files for a rudementary alerting system</h1>
+<h1>Auto-deploy folders and files for a rudementary alerting system in Microsoft Teams</h1>
 <h3>I do not consider myself a professional coder. I am a hobbyist trying to build experience where I can.</h3>
 <h3>Sorry for spaghetti code. I welcome suggestions and improvements.</h3>
 <br></br>
