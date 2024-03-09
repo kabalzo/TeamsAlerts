@@ -1,46 +1,41 @@
-$dataPath = ".\AlertTemplate.cvs"
-#$dataPath = ".\test_info.csv"
+$dataPath = ".\AlertTemplate.csv"
 $data = Import-Csv -Path $dataPath
-$department = ""
 $PS1FileLine2Part1 = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`":"
 $PS1FileLine2Part2 = "}`' -Uri `$myTeamsWebHook"
-$myWD = $pwd.ToString()
 $iconFiles = @("Yellow.ico", "Blue.ico", "Red.ico")
 $shortcutNames = @("Help Needed", "Medical", "Threat")
 
-#Menu
-while ($true) {
-	$department = Read-Host "Enter the Department"
-	Write-Host "Department entered was: $department"
-	$selection = Read-Host "Confirm [y] [n]?"
-
-	if ($selection -eq "y") {
-		$department = $department.ToUpper()
-  		$lowDept = $department.ToLower()
-		try {
-			mkdir $department -ErrorAction Stop
+$department = Split-Path -Path $pwd -Leaf
+$lowDept = $department.ToLower()
+	
+try {
+	mkdir "$pwd\..\..\..\$department" -ErrorAction Stop
+}
+catch {
+	while ($true) {
+		$choice = Read-Host "Department: $department already exists. Do you want to overwrite it [y] [n]?"
+		if ($choice -eq "y") {
+			Remove-Item "$pwd\..\..\..\$department" -Recurse -Force
+			mkdir "$pwd\..\..\..\$department"
+			break
 		}
-		catch {
-			Remove-Item $department -Recurse -Force
-			mkdir $department
+		elseif ($choice -eq "n") {
+			Write-Host "Goodbye"
+			timeout /t 5
+			exit
 		}
-		break
-	}
-	elseif ($selection -eq "n") {
-		continue 
-	}
-	else { 
-		Write-Host "Invalid selection. Try again." -ForegroundColor Red
+		else {
+			Write-Host "Invalid selection" -ForegroundColor Red
+		}
 	}
 }
-
 function CreateShortcuts ([string]$StartPath, [string]$ShortcutName, [string]$IconFile, [string]$Department, [string]$FileName) {
 	$arguments = "-File `"$FileName`""
 	$WshShell = New-Object -comObject WScript.Shell
 	$Shortcut = $WshShell.CreateShortcut("$StartPath\Alert - $ShortcutName.lnk")
 	$Shortcut.TargetPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 	$Shortcut.Arguments = $arguments
-	$Shortcut.IconLocation = "$myWD\Icons\Alert - $IconFile"
+	$Shortcut.IconLocation = "$pwd\..\..\Icons\Alert - $IconFile"
 	$Shortcut.WorkingDirectory = $StartPath
 	$Shortcut.Save()
 }
@@ -56,11 +51,11 @@ foreach ($entry in $data) {
 	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
 	$room = $entry.Room
 	$name = $entry.Name
-    	$message = "$name in room $room"
+    $message = "$name in room $room"
 	$helpTitle = $entry.Help_Title
 	$medTitle = $entry.Medical_Title
 	$threatTitle = $entry.Threat_Title
-	$startInPath = "$myWD\$department\$room"
+	$startInPath = "$pwd\..\..\..\$department\$room"
 
 	mkdir $startInPath
 
@@ -72,3 +67,5 @@ foreach ($entry in $data) {
 		CreateShortcuts -StartPath $startInPath -ShortcutName $shortcutNames[$i] -IconFile $iconFiles[$i] -Department $lowDept -FileName $ps1FileNames[$i]
 	}
 }
+Write-Host "Setup complete"
+timeout /t -1
