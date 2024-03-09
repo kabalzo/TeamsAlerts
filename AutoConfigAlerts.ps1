@@ -1,9 +1,18 @@
-$dataPath1 = ".\test_info.csv"
-$dataPath2 = ".\AlertsTemplate.cvs"
-
-$data = Import-Csv -Path $dataPath2
+#Global variables
+######################################################################################################################################################
+#$dataPath = ".\test_info.csv"
+$dataPath = ".\AlertTemplate.cvs"
+$data = Import-Csv -Path $dataPath
 $department = ""
+$PS1FileLine2Part1 = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`":"
+$PS1FileLine2Part2 = "}`' -Uri `$myTeamsWebHook"
+$myWD = $pwd.ToString()
+$iconFiles = @("Yellow.ico", "Blue.ico", "Red.ico")
+$shortcutNames = @("Help Needed", "Medical", "Threat")
+######################################################################################################################################################
 
+#Menu
+######################################################################################################################################################
 while ($true) {
 	$department = Read-Host "Enter the Department"
 	Write-Host "Department entered was: $department"
@@ -27,14 +36,19 @@ while ($true) {
 		Write-Host "Invalid selection. Try again." -ForegroundColor Red
 	}
 }
+$lowDept = $department.ToLower()
+$ps1FileNames = @("alertingpost_$lowDept`_helpneeded.ps1", "alertingpost_$lowDept`_urgent_medical.ps1", "alertingpost_$lowDept`_urgent_threat.ps1")
+######################################################################################################################################################
 
-function CreateShortcuts ([string]$StartPath, [string]$ShortcutName, [string]$IconFilePath, [string]$Department, [string]$AlertType) {
-	$target = "-File `"$AlertType`""
+#Functions
+######################################################################################################################################################
+function CreateShortcuts ([string]$StartPath, [string]$ShortcutName, [string]$IconFile, [string]$Department, [string]$FileName) {
+	$arguments = "-File `"$FileName`""
 	$WshShell = New-Object -comObject WScript.Shell
-	$Shortcut = $WshShell.CreateShortcut("$StartPath\$ShortcutName")
+	$Shortcut = $WshShell.CreateShortcut("$StartPath\Alert - $ShortcutName.lnk")
 	$Shortcut.TargetPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-	$Shortcut.Arguments = $target
-	$Shortcut.IconLocation = $IconFilePath
+	$Shortcut.Arguments = $arguments
+	$Shortcut.IconLocation = "$myWD\Icons\Alert - $IconFile"
 	$Shortcut.WorkingDirectory = $StartPath
 	$Shortcut.Save()
 }
@@ -43,10 +57,13 @@ function CreatePS1Files ([string]$MakeFile, [string]$WriteLine1, [string]$WriteL
 	$WriteLine1 | Out-File -FilePath $MakeFile -Append
 	$WriteLine2 | Out-File -FilePath $MakeFile -Append
 }
+######################################################################################################################################################
 
+#Main body
+######################################################################################################################################################
 foreach ($entry in $data) {
-	$myWD = $pwd.ToString()
 	$webhook = $entry.Webhook
+	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
 	$room = $entry.Room
 	$name = $entry.Name
     $message = "$name in room $room"
@@ -54,27 +71,15 @@ foreach ($entry in $data) {
 	$medTitle = $entry.Medical_Title
 	$threatTitle = $entry.Threat_Title
 	$startInPath = "$myWD\$department\$room"
-	$lowDept = $department.ToLower()
 
-	mkdir "$department\$room"
+	mkdir $startInPath
 
-	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
-	$PS1FileLine2_Help = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$helpTitle`", `"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
-	$PS1FileLine2_Medical = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$medTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
-	$PS1FileLine2_Threat = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`": `"$threatTitle`",`"text`":`"$message`"}`' -Uri `$myTeamsWebHook"
-
-	$helpPath = "alertingpost_$lowDept`_helpneeded.ps1"	
-	$medPath = "alertingpost_$lowDept`_urgent_medical.ps1"
-	$threatPath = "alertingpost_$lowDept`_urgent_threat.ps1"
-
+	$PS1FileLine2 = @("$PS1FileLine2Part1 `"$helpTitle`", `"text`": `"$message`"$PS1FileLine2Part2", "$PS1FileLine2Part1 `"$medTitle`", `"text`": `"$message`"$PS1FileLine2Part2","$PS1FileLine2Part1 `"$threatTitle`", `"text`": `"$message`"$PS1FileLine2Part2")
 	#Create .ps1 files
-	CreatePS1Files -MakeFile "$startInPath\$helpPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Help
-	CreatePS1Files -MakeFile "$startInPath\$medPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Medical
-	CreatePS1Files -MakeFile "$startInPath\$threatPath" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2_Threat
-
-	#Create .lnk shortcuts
-	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Help Needed.lnk" -IconFilePath "$myWD\Icons\Alert - Yellow.ico" -WorkingDir $myWD -Department $lowDept -AlertType $helpPath
-	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Medical.lnk" -IconFilePath "$myWD\Icons\Alert - Blue.ico" -WorkingDir $myWD -Department $lowDept -AlertType $medPath
-	CreateShortcuts -StartPath $startInPath -ShortcutName "Alert - Threat.lnk" -IconFilePath "$myWD\Icons\Alert - Red.ico" -WorkingDir $myWD -Department $lowDept -AlertType $threatPath
+	for ($i=0; $i -lt 3; $i++) {
+		$ps1File = $ps1FileNames[$i]
+		CreatePS1Files -MakeFile "$startInPath\$ps1File" -WriteLine1 $PS1FileLine1 -WriteLine2 $PS1FileLine2[$i]
+		CreateShortcuts -StartPath $startInPath -ShortcutName $shortcutNames[$i] -IconFile $iconFiles[$i] -Department $lowDept -FileName $ps1FileNames[$i]
+	}
 }
-
+######################################################################################################################################################
