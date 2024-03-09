@@ -10,10 +10,12 @@
     <ul>
       <li>You will have to use Get-ExecutionPolicy and Set-ExecutionPolicy to run unsigned script.</li>
     </ul>
-  <li>When prompted, enter name of the directory you want files and sub-directories to be placed in</li>
+  <li>Create folder in Setup and copy/paste AutoConfig and AlertTemplate files into it</li>
     <ul>
-      <li>This name will become a part of the .ps1 files also.</li>
-      <li>Example: Running AutoConfigAlerts.ps1 from with C:\Test and specifying XYZ will create C:\Test\XYZ directory.</li>
-      <li>Confirm you entered the correct name.</li>
+      <li>If you filled out the .csv file correctly, everything will be configured automatically</li>
+      <li>Creates new folders in root folder</li>
+      <li>You can edit the .csv files and re-run AutoConfig.ps1</li>
+      <li>Only configured to create three alerts with three icons. Change as needed</li>
+      <li>Room numbers should be unique</li>
     </ul>
 </ol>
