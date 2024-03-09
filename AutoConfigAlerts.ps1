@@ -1,7 +1,5 @@
-#Global variables
-######################################################################################################################################################
-#$dataPath = ".\test_info.csv"
 $dataPath = ".\AlertTemplate.cvs"
+#$dataPath = ".\test_info.csv"
 $data = Import-Csv -Path $dataPath
 $department = ""
 $PS1FileLine2Part1 = "Invoke-RestMethod -Method post -ContentType `'Application/Json`' -Body `'{`"title`":"
@@ -9,10 +7,8 @@ $PS1FileLine2Part2 = "}`' -Uri `$myTeamsWebHook"
 $myWD = $pwd.ToString()
 $iconFiles = @("Yellow.ico", "Blue.ico", "Red.ico")
 $shortcutNames = @("Help Needed", "Medical", "Threat")
-######################################################################################################################################################
 
 #Menu
-######################################################################################################################################################
 while ($true) {
 	$department = Read-Host "Enter the Department"
 	Write-Host "Department entered was: $department"
@@ -20,6 +16,7 @@ while ($true) {
 
 	if ($selection -eq "y") {
 		$department = $department.ToUpper()
+  		$lowDept = $department.ToLower()
 		try {
 			mkdir $department -ErrorAction Stop
 		}
@@ -36,12 +33,7 @@ while ($true) {
 		Write-Host "Invalid selection. Try again." -ForegroundColor Red
 	}
 }
-$lowDept = $department.ToLower()
-$ps1FileNames = @("alertingpost_$lowDept`_helpneeded.ps1", "alertingpost_$lowDept`_urgent_medical.ps1", "alertingpost_$lowDept`_urgent_threat.ps1")
-######################################################################################################################################################
 
-#Functions
-######################################################################################################################################################
 function CreateShortcuts ([string]$StartPath, [string]$ShortcutName, [string]$IconFile, [string]$Department, [string]$FileName) {
 	$arguments = "-File `"$FileName`""
 	$WshShell = New-Object -comObject WScript.Shell
@@ -57,10 +49,8 @@ function CreatePS1Files ([string]$MakeFile, [string]$WriteLine1, [string]$WriteL
 	$WriteLine1 | Out-File -FilePath $MakeFile -Append
 	$WriteLine2 | Out-File -FilePath $MakeFile -Append
 }
-######################################################################################################################################################
 
-#Main body
-######################################################################################################################################################
+$ps1FileNames = @("alertingpost_$lowDept`_helpneeded.ps1", "alertingpost_$lowDept`_urgent_medical.ps1", "alertingpost_$lowDept`_urgent_threat.ps1")
 foreach ($entry in $data) {
 	$webhook = $entry.Webhook
 	$PS1FileLine1 = "`$myTeamsWebHook = `"$webhook`""
@@ -82,4 +72,3 @@ foreach ($entry in $data) {
 		CreateShortcuts -StartPath $startInPath -ShortcutName $shortcutNames[$i] -IconFile $iconFiles[$i] -Department $lowDept -FileName $ps1FileNames[$i]
 	}
 }
-######################################################################################################################################################
