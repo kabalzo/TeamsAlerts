@@ -1,5 +1,4 @@
 <h1>Auto-deploy folders and files for a rudementary alerting system in Microsoft Teams</h1>
-<br></br>
 <ol>
   <li>Fill out AlertTemplate.csv with name, room, and messages</li>
     <ul>
